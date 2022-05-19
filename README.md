@@ -29,7 +29,7 @@ This command performs the following operations:
 
 The distribution is configured as follows:
 
-- A user named `alpine` is set as the default user. The user as `doas` (BSD
+- A user named `arch` is set as the default user. The user as `doas` (BSD
   version of sudo used in Arch Linux) privileges.
 - zsh with [oh-my-zsh](https://ohmyz.sh/) is used as shell.
 - [powerlevel10k](https://github.com/romkatv/powerlevel10k) is set as the
@@ -75,7 +75,7 @@ And then create a WSL distribution with:
 ```console
 > Install-WslArch
 ####> Creating directory [C:\Users\AntoineMartin\AppData\Local\WslArch]...
-####> Downloading https://dl-cdn.alpinelinux.org/alpine/v3.15/releases/x86_64/alpine-minirootfs-3.15.0-x86_64.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\WslArch\rootfs.tar.gz...
+####> Downloading https://github.com/yuk7/ArchWSL-FS/releases/download/22051900/rootfs.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\WslArch\rootfs.tar.gz...
 ####> Creating distribution [WslArch]...
 ####> Running initialization script on distribution [WslArch]...
 ####> Done. Command to enter distribution: wsl -d WslArch
@@ -85,14 +85,14 @@ And then create a WSL distribution with:
 You can specify the name of the distribution:
 
 ```console
-> Install-WslArch alpine2
+> Install-WslArch arch2
 ...
 ```
 
 To uninstall the distribution, just type:
 
 ```console
-> Uninstall-WslArch alpine2
+> Uninstall-WslArch arch2
 >
 ```
 
@@ -106,7 +106,7 @@ distribution:
 ```powershell
 ❯ install-WslArch docker
 ####> Creating directory [C:\Users\AntoineMartin\AppData\Local\docker]...
-####> Downloading https://dl-cdn.alpinelinux.org/alpine/v3.15/releases/x86_64/alpine-minirootfs-3.15.0-x86_64.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker\rootfs.tar.gz...
+####> Downloading https://dl-cdn.archlinux.org/arch/v3.15/releases/x86_64/arch-minirootfs-3.15.0-x86_64.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker\rootfs.tar.gz...
 ####> Creating distribution [docker]...
 ####> Running initialization script on distribution [docker]...
 ####> Done. Command to enter distribution: wsl -d docker
@@ -136,7 +136,7 @@ heredoc> [boot]
 heredoc> command = /sbin/openrc default
 heredoc> EOF
 # Allow default user to run docker
-❯ addgroup alpine docker
+❯ addgroup arch docker
 # Return to powershell
 ❯ exit
 # Terminate distrbution
@@ -159,12 +159,12 @@ Set-Alias -Name docker -Value RunDockerInWsl
 and run docker directly from powershell:
 
 ```powershell
-❯ docker run --rm -it alpine:latest /bin/sh
-Unable to find image 'alpine:latest' locally
-latest: Pulling from library/alpine
+❯ docker run --rm -it arch:latest /bin/sh
+Unable to find image 'arch:latest' locally
+latest: Pulling from library/arch
 df9b9388f04a: Pull complete
 Digest: sha256:4edbd2beb5f78b1014028f4fbb99f3237d9561100b6881aabbf5acce2c4f9454
-Status: Downloaded newer image for alpine:latest
+Status: Downloaded newer image for arch:latest
 / #
 ```
 

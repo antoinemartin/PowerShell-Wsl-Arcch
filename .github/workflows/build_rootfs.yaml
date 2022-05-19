@@ -20,24 +20,28 @@ on:
         description: Archlinux Bootstrap FS URL
         required: true
         default: "http://mirror.rackspace.com/archlinux/iso/2022.05.01/archlinux-bootstrap-2022.05.01-x86_64.tar.gz"
+      tag_name:
+        description: Release tag name
+        required: true
+        default: "22051900"
 
-  
 jobs:
   publish-github:
     name: Publish on Github
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install dependencies for build (Apt)
+      - name: Remove the root.x86_64 prefix from the Root FS
         shell: bash
         run: |
           curl -sLo origfs.tar.gz "${{ github.event.inputs.bootstrap_url }}"
-          tar zxf origfs.tar.gz
-          (cd root.x86_64; tar -c .) | gzip > rootfs.tar.gz
+          sudo tar zxf origfs.tar.gz
+          sudo bash -c "cd root.x86_64; tar zcf ../rootfs.tar.gz ."
       - name: Upload the release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             rootfs.tar.gz
+          tag_name: "${{ github.event.inputs.tag_name }}"
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
