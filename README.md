@@ -4,6 +4,9 @@ Powershell cmdlet to quickly create a small Arch Linux based WSL distribution.
 It is available in PowerShell Gallery as
 [`Wsl-Arch`](https://www.powershellgallery.com/packages/Wsl-Arch/1.1.1).
 
+This project is an Arch Linux adaptation of its sister project
+[PowerShell-Wsl-Alpine](https://github.com/antoinemartin/PowerShell-Wsl-Alpine).
+
 ## Rationale
 
 As a developer working mainly on Linux, I have the tendency to put everything in
@@ -29,8 +32,7 @@ This command performs the following operations:
 
 The distribution is configured as follows:
 
-- A user named `alpine` is set as the default user. The user as `doas` (BSD
-  version of sudo used in Arch Linux) privileges.
+- A user named `arch` is set as the default user. The user as `sudo` privileges.
 - zsh with [oh-my-zsh](https://ohmyz.sh/) is used as shell.
 - [powerlevel10k](https://github.com/romkatv/powerlevel10k) is set as the
   default oh-my-zsh theme.
@@ -75,7 +77,7 @@ And then create a WSL distribution with:
 ```console
 > Install-WslArch
 ####> Creating directory [C:\Users\AntoineMartin\AppData\Local\WslArch]...
-####> Downloading https://dl-cdn.alpinelinux.org/alpine/v3.15/releases/x86_64/alpine-minirootfs-3.15.0-x86_64.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\WslArch\rootfs.tar.gz...
+####> Downloading https://github.com/antoinemartin/PowerShell-Wsl-Arch/releases/download/22051900/rootfs.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\WslArch\rootfs.tar.gz...
 ####> Creating distribution [WslArch]...
 ####> Running initialization script on distribution [WslArch]...
 ####> Done. Command to enter distribution: wsl -d WslArch
@@ -85,14 +87,14 @@ And then create a WSL distribution with:
 You can specify the name of the distribution:
 
 ```console
-> Install-WslArch alpine2
+> Install-WslArch arch2
 ...
 ```
 
 To uninstall the distribution, just type:
 
 ```console
-> Uninstall-WslArch alpine2
+> Uninstall-WslArch arch2
 >
 ```
 
@@ -106,7 +108,7 @@ distribution:
 ```powershell
 ❯ install-WslArch docker
 ####> Creating directory [C:\Users\AntoineMartin\AppData\Local\docker]...
-####> Downloading https://dl-cdn.alpinelinux.org/alpine/v3.15/releases/x86_64/alpine-minirootfs-3.15.0-x86_64.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker\rootfs.tar.gz...
+####> Downloading https://github.com/yuk7/ArchWSL-FS/releases/download/22051900/rootfs.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker\rootfs.tar.gz...
 ####> Creating distribution [docker]...
 ####> Running initialization script on distribution [docker]...
 ####> Done. Command to enter distribution: wsl -d docker
@@ -120,30 +122,19 @@ Then connect to it as root and install docker:
 ❯ wsl -d docker -u root
 [powerlevel10k] fetching gitstatusd .. [ok]
 # Add docker
-❯ apk --update add docker
-(1/13) Installing libseccomp (2.5.2-r0)
+❯ pacman -Sy --noconfirm docker
+:: Synchronizing package databases...
+ core is up to date
+ extra is up to date
+ community is up to date
+resolving dependencies...
+looking for conflicting packages...
+
+Packages (5) bridge-utils-1.7.1-1  containerd-1.6.4-1  libtool-2.4.7-2  runc-1.1.2-1  docker-1:20.10.16-1
 ...
-OK: 304 MiB in 103 packages
-# Enabling OpenRC
-❯ openrc default
- * Caching service dependencies ...         [ ok ]
-# Start docker with OpenRC
-❯ rc-update add docker default
- * service docker added to runlevel default
-# Start OpenRC, and hence docker, on distribution startup
-❯ cat >/etc/wsl.conf <<EOF
-heredoc> [boot]
-heredoc> command = /sbin/openrc default
-heredoc> EOF
-# Allow default user to run docker
-❯ addgroup alpine docker
-# Return to powershell
-❯ exit
-# Terminate distrbution
-❯ wsl --terminate docker
-# Start distribution and docker
-❯ wsl -d docker docker ps
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+(4/4) Arming ConditionNeedsUpdate..
+# Adding base user as docker
+❯ usermod -aG docker arch
 ```
 
 Now, with this distribution, you can add the following alias to
@@ -151,43 +142,83 @@ Now, with this distribution, you can add the following alias to
 
 ```powershell
 function RunDockerInWsl {
-  wsl -d docker /usr/bin/docker $args
+  # Take $Env:DOCKER_WSL or 'docker' if undefined
+  $DockerWSL = if ($null -eq $Env:DOCKER_WSL) { "docker" } else { $Env:DOCKER_WSL }
+  # Try to find an existing distribution with the name
+  $existing = Get-ChildItem HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lxss |  Where-Object { $_.GetValue('DistributionName') -eq $DockerWSL }
+  if ($null -eq $existing) {
+    # Fail if the distribution doesn't exist
+    throw "The WSL distribution [$DockerWSL] does not exist !"
+  } else {
+    # Ensure docker is started
+    wsl -d $DockerWSL /bin/sh -c "test -f /var/run/docker.pid || sudo -b sh -c 'dockerd -p /var/run/docker.pid -H unix:// >/var/log/docker.log 2>&1'"
+    # Perform the requested command
+    wsl -d $DockerWSL /usr/bin/docker $args
+  }
 }
+
 Set-Alias -Name docker -Value RunDockerInWsl
 ```
 
 and run docker directly from powershell:
 
 ```powershell
-❯ docker run --rm -it alpine:latest /bin/sh
-Unable to find image 'alpine:latest' locally
-latest: Pulling from library/alpine
+❯ docker run --rm -it arch:latest /bin/sh
+Unable to find image 'arch:latest' locally
+latest: Pulling from library/arch
 df9b9388f04a: Pull complete
 Digest: sha256:4edbd2beb5f78b1014028f4fbb99f3237d9561100b6881aabbf5acce2c4f9454
-Status: Downloaded newer image for alpine:latest
-/ #
+Status: Downloaded newer image for arch:latest
+/ # exit
 ```
 
 You can save the distrbution root filesystem for reuse:
 
 ```powershell
-❯ Export-WslArch docker -OutputFile $env:USERPROFILE\Downloads\docker.tar.gz
-Distribution docker saved to C:\Users\AntoineMartin\Downloads\docker.tar.gz
+❯ Export-WslArch docker -OutputFile $env:USERPROFILE\Downloads\archdocker.tar.gz
+Distribution docker saved to C:\Users\AntoineMartin\Downloads\archdocker.tar.gz
 ```
 
-And then recreate the distribution in the same state from the exported root
+And then create another distribution in the same state from the exported root
 filesystem:
 
 ```powershell
-❯ Uninstall-WslArch docker
-❯ Install-WslArch docker -SkipConfigure -RootFSURL file://$env:USERPROFILE\Downloads\docker.tar.gz
-####> Creating directory [C:\Users\AntoineMartin\AppData\Local\docker]...
-####> Downloading file://C:\Users\AntoineMartin\Downloads\docker.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker\rootfs.tar.gz...
-####> Creating distribution [docker]...
-####> Done. Command to enter distribution: wsl -d docker
-❯ wsl -d docker docker ps
+❯ Install-WslArch docker2 -SkipConfigure -RootFSURL file://$env:USERPROFILE\Downloads\archdocker.tar.gz
+####> Creating directory [C:\Users\AntoineMartin\AppData\Local\docker2]...
+####> Downloading file://C:\Users\AntoineMartin\Downloads\archdocker.tar.gz â†’ C:\Users\AntoineMartin\AppData\Local\docker2\rootfs.tar.gz...
+####> Creating distribution [docker2]...
+####> Done. Command to enter distribution: wsl -d docker2
+❯ $env:DOC
 CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ❯
+```
+
+You can then flip between the two distrbutions:
+
+```powershell
+# Run nginx in docker distribution
+❯ docker run -d -p 8080:80 nginx:latest
+docker run -d -p 8080:80 nginx:latest
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+214ca5fb9032: Pull complete
+66eec13bb714: Pull complete
+17cb812420e3: Pull complete
+56fbf79cae7a: Pull complete
+c4547ad15a20: Pull complete
+d31373136b98: Pull complete
+Digest: sha256:2d17cc4981bf1e22a87ef3b3dd20fbb72c3868738e3f307662eb40e2630d4320
+Status: Downloaded newer image for nginx:latest
+7763bf39f6ebc07dd26b51514a2adcc9297aea377b7d465b4d02d04597de19c6
+# View it running
+❯ docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED              STATUS              PORTS                                   NAMES
+7763bf39f6eb   nginx:latest   "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:8080->80/tcp, :::8080->80/tcp   confident_ride
+# Switch to other distribution
+❯ $Env:DOCKER_WSL="docker2"
+# Clean docker instance !
+❯ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 
 ## Development
