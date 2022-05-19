@@ -87,7 +87,7 @@ function Install-WslArch {
     param(
         [Parameter(Position = 0)]
         [string]$DistributionName = "WslArch",
-        [string]$RootFSURL = "https://github.com/yuk7/ArchWSL-FS/releases/download/22051900/rootfs.tar.gz",
+        [string]$RootFSURL = "https://github.com/antoinemartin/PowerShell-Wsl-Arch/releases/download/22051900/rootfs.tar.gz",
         [string]$BaseDirectory = $env:LOCALAPPDATA,
         [Parameter(Mandatory = $false)]
         [switch]$SkipConfigure
